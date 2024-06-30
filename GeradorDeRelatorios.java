@@ -3,6 +3,9 @@ import java.io.IOException;
 
 import java.util.*;
 
+// TODO: utilizar colecoes
+// TODO: acrescentar os adicionais
+
 public class GeradorDeRelatorios {
 
 	public static final String ALG_INSERTIONSORT = "insertion";
@@ -23,27 +26,27 @@ public class GeradorDeRelatorios {
 	public static final int FORMATO_ITALICO = 0b0010;
 
 	private Produto[] produtos;
-	private String filtro;
-	private String argFiltro;
 	private int format_flags;
 
 	private EstrategiaOrdenacao estrategiaOrdenacao;
+	private EstrategiaFiltragem estrategiaFiltragem;
+	private String argFiltro;
 
 
-	public GeradorDeRelatorios(Produto[] produtos, EstrategiaOrdenacao estrategiaOrdenacao, String filtro,
-			String argFiltro,
-			int format_flags) {
+	public GeradorDeRelatorios(Produto[] produtos, EstrategiaOrdenacao estrategiaOrdenacao,
+							   EstrategiaFiltragem estrategiaFiltragem, String argFiltro, int format_flags) {
 
+		//TODO: rapaz ta certo isso?
 		this.produtos = new Produto[produtos.length];
-
 		for (int i = 0; i < produtos.length; i++) {
 
 			this.produtos[i] = produtos[i];
 		}
+
 		this.format_flags = format_flags;
-		this.filtro = filtro;
 		this.argFiltro = argFiltro;
 		this.estrategiaOrdenacao = estrategiaOrdenacao;
+		this.estrategiaFiltragem = estrategiaFiltragem;
 	}
 
 	private void ordena(int ini, int fim) {
@@ -75,48 +78,20 @@ public class GeradorDeRelatorios {
 		for (int i = 0; i < produtos.length; i++) {
 
 			Produto p = produtos[i];
-			boolean selecionado = false;
 
-			if (filtro.equals(FILTRO_TODOS)) {
-
-				selecionado = true;
-			} else if (filtro.equals(FILTRO_ESTOQUE_MENOR_OU_IGUAL_A)) {
-
-				if (p.getQtdEstoque() <= Integer.parseInt(argFiltro))
-					selecionado = true;
-			} else if (filtro.equals(FILTRO_CATEGORIA_IGUAL_A)) {
-
-				if (p.getCategoria().equalsIgnoreCase(argFiltro))
-					selecionado = true;
-			} else {
-				throw new RuntimeException("Filtro invalido!");
-			}
-
-			if (selecionado) {
+			if (estrategiaFiltragem.seleciona(p)) {
 
 				out.print("<li>");
 
 				if ((format_flags & FORMATO_ITALICO) > 0) {
-
-					out.print("<span style=\"font-style:italic\">");
+					p = new ProdutoItalico(p);
 				}
 
 				if ((format_flags & FORMATO_NEGRITO) > 0) {
-
-					out.print("<span style=\"font-weight:bold\">");
+					p = new ProdutoNegrito(p);
 				}
 
 				out.print(p.formataParaImpressao());
-
-				if ((format_flags & FORMATO_NEGRITO) > 0) {
-
-					out.print("</span>");
-				}
-
-				if ((format_flags & FORMATO_ITALICO) > 0) {
-
-					out.print("</span>");
-				}
 
 				out.println("</li>");
 				count++;
@@ -133,7 +108,7 @@ public class GeradorDeRelatorios {
 
 	public static Produto[] carregaProdutos() {
 
-		return new Produto[] {
+		return new Produto[]{
 
 				new ProdutoPadrao(1, "O Hobbit", "Livros", 2, 34.90),
 				new ProdutoPadrao(2, "Notebook Core i7", "Informatica", 5, 1999.90),
@@ -197,9 +172,10 @@ public class GeradorDeRelatorios {
 		String[] opcoes_formatacao = new String[2];
 		opcoes_formatacao[0] = args.length > 4 ? args[4] : null;
 		opcoes_formatacao[1] = args.length > 5 ? args[5] : null;
-	
+
 		int formato = FORMATO_PADRAO;
 
+		//TODO: rapaz ta certo isso? 2
 		for (int i = 0; i < opcoes_formatacao.length; i++) {
 
 			String op = opcoes_formatacao[i];
@@ -208,38 +184,12 @@ public class GeradorDeRelatorios {
 					: 0);
 		}
 
-		EstrategiaCriterio estrategiaCriterioOrd;
-		switch (opcao_criterio_ord) {
-			case CRIT_DESC_CRESC:
-				estrategiaCriterioOrd = new EstrategiaDescCres();
-				break;
-			case CRIT_PRECO_CRESC:
-				estrategiaCriterioOrd = new EstrategiaPrecoCres();
-				break;
-			case CRIT_ESTOQUE_CRESC:
-				estrategiaCriterioOrd = new EstrategiaEstoqueCres();
-				break;
-			default:
-				throw new RuntimeException("Criterio de ordenacao invalido!");
-		}
-
-		EstrategiaOrdenacao estrategiaOrdenacao;
-		switch (opcao_algoritmo) {
-			case ALG_INSERTIONSORT:
-				estrategiaOrdenacao = new EstrategiaInsertionSort();
-				break;
-			case ALG_QUICKSORT:
-				estrategiaOrdenacao = new EstrategiaQuicksort();
-				break;
-			default:
-				throw new RuntimeException("Algoritmo de ordenacao invalido!");
-		}
-
-		estrategiaOrdenacao.setEstrategiaCriterio(estrategiaCriterioOrd);
+		EstrategiaOrdenacao estrategiaOrdenacao = getEstrategiaOrdenacao(opcao_criterio_ord, opcao_algoritmo);
+		EstrategiaFiltragem estrategiaFiltragem = getEstrategiaFiltragem(opcao_criterio_filtro);
 
 		GeradorDeRelatorios gdr = new GeradorDeRelatorios(carregaProdutos(),
 				estrategiaOrdenacao,
-				opcao_criterio_filtro,
+				estrategiaFiltragem,
 				opcao_parametro_filtro,
 				formato);
 
@@ -248,5 +198,32 @@ public class GeradorDeRelatorios {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private static EstrategiaFiltragem getEstrategiaFiltragem(String opcao_criterio_filtro) {
+		return switch (opcao_criterio_filtro) {
+			case FILTRO_TODOS -> new EstrategiaTodos();
+			case FILTRO_CATEGORIA_IGUAL_A -> new EstrategiaCategoria();
+			case FILTRO_ESTOQUE_MENOR_OU_IGUAL_A -> new EstrategiaEstoqueMenorIgual();
+			default -> throw new RuntimeException("Filtro invalido!");
+		};
+	}
+
+	private static EstrategiaOrdenacao getEstrategiaOrdenacao(String opcao_criterio_ord, String opcao_algoritmo) {
+		EstrategiaCriterio estrategiaCriterioOrd = switch (opcao_criterio_ord) {
+			case CRIT_DESC_CRESC -> new EstrategiaDescCres();
+			case CRIT_PRECO_CRESC -> new EstrategiaPrecoCres();
+			case CRIT_ESTOQUE_CRESC -> new EstrategiaEstoqueCres();
+			default -> throw new RuntimeException("Criterio de ordenacao invalido!");
+		};
+
+		EstrategiaOrdenacao estrategiaOrdenacao = switch (opcao_algoritmo) {
+			case ALG_INSERTIONSORT -> new EstrategiaInsertionSort();
+			case ALG_QUICKSORT -> new EstrategiaQuicksort();
+			default -> throw new RuntimeException("Algoritmo de ordenacao invalido!");
+		};
+
+		estrategiaOrdenacao.setEstrategiaCriterio(estrategiaCriterioOrd);
+		return estrategiaOrdenacao;
 	}
 }

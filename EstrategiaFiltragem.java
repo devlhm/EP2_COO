@@ -1,3 +1,5 @@
 public interface EstrategiaFiltragem {
-    public boolean seleciona();
+    public void setArg(String arg);
+
+    public boolean seleciona(Produto produto);
 }
