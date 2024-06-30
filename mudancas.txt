@@ -1,0 +1,2 @@
+criar estrategias para criterios de ordenacao [ x ]
+criar estrategias para algoritmos de ordenacao [ x ]
