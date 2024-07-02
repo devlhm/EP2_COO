@@ -3,7 +3,6 @@ import java.io.IOException;
 
 import java.util.*;
 
-// TODO: utilizar colecoes
 // TODO: acrescentar os adicionais
 
 public class GeradorDeRelatorios {
@@ -25,7 +24,7 @@ public class GeradorDeRelatorios {
 	public static final int FORMATO_NEGRITO = 0b0001;
 	public static final int FORMATO_ITALICO = 0b0010;
 
-	private Produto[] produtos;
+	private List<Produto> produtos;
 	private int format_flags;
 
 	private EstrategiaOrdenacao estrategiaOrdenacao;
@@ -33,15 +32,11 @@ public class GeradorDeRelatorios {
 	private String argFiltro;
 
 
-	public GeradorDeRelatorios(Produto[] produtos, EstrategiaOrdenacao estrategiaOrdenacao,
+	public GeradorDeRelatorios(List<Produto> produtos, EstrategiaOrdenacao estrategiaOrdenacao,
 							   EstrategiaFiltragem estrategiaFiltragem, String argFiltro, int format_flags) {
 
 		//TODO: rapaz ta certo isso?
-		this.produtos = new Produto[produtos.length];
-		for (int i = 0; i < produtos.length; i++) {
-
-			this.produtos[i] = produtos[i];
-		}
+		this.produtos = produtos;
 
 		this.format_flags = format_flags;
 		this.argFiltro = argFiltro;
@@ -55,7 +50,7 @@ public class GeradorDeRelatorios {
 
 	public void debug() {
 
-		System.out.println("Gerando relatório para array contendo " + produtos.length + " produto(s)");
+		System.out.println("Gerando relatório para array contendo " + produtos.size() + " produto(s)");
 		System.out.println("parametro filtro = '" + argFiltro + "'");
 	}
 
@@ -63,7 +58,7 @@ public class GeradorDeRelatorios {
 
 		debug();
 
-		ordena(0, produtos.length - 1);
+		ordena(0, produtos.size() - 1);
 
 		PrintWriter out = new PrintWriter(arquivoSaida);
 
@@ -75,21 +70,15 @@ public class GeradorDeRelatorios {
 
 		int count = 0;
 
-		for (int i = 0; i < produtos.length; i++) {
-
-			Produto p = produtos[i];
-
+		for(Produto p : produtos) {
 			if (estrategiaFiltragem.seleciona(p)) {
-
 				out.print("<li>");
 
-				if ((format_flags & FORMATO_ITALICO) > 0) {
+				if ((format_flags & FORMATO_ITALICO) > 0)
 					p = new ProdutoItalico(p);
-				}
 
-				if ((format_flags & FORMATO_NEGRITO) > 0) {
+				if ((format_flags & FORMATO_NEGRITO) > 0)
 					p = new ProdutoNegrito(p);
-				}
 
 				out.print(p.formataParaImpressao());
 
@@ -99,16 +88,16 @@ public class GeradorDeRelatorios {
 		}
 
 		out.println("</ul>");
-		out.println(count + " produtos listados, de um total de " + produtos.length + ".");
+		out.println(count + " produtos listados, de um total de " + produtos.size() + ".");
 		out.println("</body>");
 		out.println("</html>");
 
 		out.close();
 	}
 
-	public static Produto[] carregaProdutos() {
-
-		return new Produto[]{
+	public static List<Produto> carregaProdutos() {
+		List<Produto> lista = new LinkedList<>();
+		Collections.addAll(lista, new Produto[]{
 
 				new ProdutoPadrao(1, "O Hobbit", "Livros", 2, 34.90),
 				new ProdutoPadrao(2, "Notebook Core i7", "Informatica", 5, 1999.90),
@@ -143,7 +132,9 @@ public class GeradorDeRelatorios {
 				new ProdutoPadrao(30, "The Art of Computer Programming Vol. 1", "Livros", 3, 240.00),
 				new ProdutoPadrao(31, "The Art of Computer Programming Vol. 2", "Livros", 2, 200.00),
 				new ProdutoPadrao(32, "The Art of Computer Programming Vol. 3", "Livros", 4, 270.00)
-		};
+		});
+
+		return lista;
 	}
 
 	private static void imprimeInstrucoes() {
@@ -182,6 +173,7 @@ public class GeradorDeRelatorios {
 			formato |= (op != null
 					? op.equals("negrito") ? FORMATO_NEGRITO : (op.equals("italico") ? FORMATO_ITALICO : 0)
 					: 0);
+			System.out.println("Formato: " + Integer.toBinaryString(formato));
 		}
 
 		EstrategiaOrdenacao estrategiaOrdenacao = getEstrategiaOrdenacao(opcao_criterio_ord, opcao_algoritmo);

@@ -1,21 +1,24 @@
+import java.util.List;
+
 public class EstrategiaInsertionSort implements EstrategiaOrdenacao {
     private EstrategiaCriterio estrategiaCriterio;
     @Override
-    public void ordena(int ini, int fim, Produto[] produtos) {
+    public void ordena(int ini, int fim, List<Produto> produtos) {
+
         for(int i = ini; i <= fim; i++){
 
-            Produto x = produtos[i];	
+            Produto x = produtos.get(i);	
             int j = (i - 1);
 
             while(j >= ini){
-                Produto y = produtos[j];
+                Produto y = produtos.get(j);
                 if(estrategiaCriterio.xAntesDeY(x, y)) {
-                    produtos[j + 1] = y;
+                    produtos.set(j+1, y);
                     j--;
-                };    
+                } else break;
             }
 
-            produtos[j + 1] = x;
+            produtos.set(j+1, x);
         }
     }
     @Override
