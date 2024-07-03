@@ -1,16 +1,13 @@
 public class ProdutoCor extends ProdutoDecorado {
-    private String color;
+    private String cor;
 
-    public ProdutoCor(Produto produtoBase) {
+    public ProdutoCor(Produto produtoBase, String cor) {
         super(produtoBase);
+        this.cor = cor;
     }
 
     @Override
     public String formataParaImpressao() {
-        return "<span style=\"color:" + color + "\">" + produtoBase.formataParaImpressao() + "</span>";
-    }
-
-    public void setColor(String color) {
-        this.color = color;
+        return "<span style=\"color:" + cor + "\">" + produtoBase.formataParaImpressao() + "</span>";
     }
 }
