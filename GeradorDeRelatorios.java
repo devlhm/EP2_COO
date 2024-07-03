@@ -13,10 +13,15 @@ public class GeradorDeRelatorios {
 	public static final String CRIT_DESC_CRESC = "descricao_c";
 	public static final String CRIT_PRECO_CRESC = "preco_c";
 	public static final String CRIT_ESTOQUE_CRESC = "estoque_c";
+	public static final String CRIT_DESC_DEC = "descricao_d";
+	public static final String CRIT_PRECO_DEC = "preco_d";
+	public static final String CRIT_ESTOQUE_DEC = "estoque_d";
 
 	public static final String FILTRO_TODOS = "todos";
 	public static final String FILTRO_ESTOQUE_MENOR_OU_IGUAL_A = "estoque_menor_igual";
 	public static final String FILTRO_CATEGORIA_IGUAL_A = "categoria_igual";
+	public static final String FILTRO_INTERVALO_PRECO = "intervalo_preco";
+	public static final String FILTRO_DESCRICAO = "descricao";
 
 	// operador bit a bit "ou" pode ser usado para combinar mais de
 	// um estilo de formatacao simultaneamente (veja como no main)
@@ -29,17 +34,16 @@ public class GeradorDeRelatorios {
 
 	private EstrategiaOrdenacao estrategiaOrdenacao;
 	private EstrategiaFiltragem estrategiaFiltragem;
-	private String argFiltro;
+	private List<String> argsFiltro;
 
 
 	public GeradorDeRelatorios(List<Produto> produtos, EstrategiaOrdenacao estrategiaOrdenacao,
-							   EstrategiaFiltragem estrategiaFiltragem, String argFiltro, int format_flags) {
+							   EstrategiaFiltragem estrategiaFiltragem, List<String> argsFiltro) {
 
 		//TODO: rapaz ta certo isso?
 		this.produtos = produtos;
 
-		this.format_flags = format_flags;
-		this.argFiltro = argFiltro;
+		this.argsFiltro = argsFiltro;
 		this.estrategiaOrdenacao = estrategiaOrdenacao;
 		this.estrategiaFiltragem = estrategiaFiltragem;
 	}
@@ -51,7 +55,7 @@ public class GeradorDeRelatorios {
 	public void debug() {
 
 		System.out.println("Gerando relatório para array contendo " + produtos.size() + " produto(s)");
-		System.out.println("parametro filtro = '" + argFiltro + "'");
+		System.out.println("parametros filtro = '" + argsFiltro.toString() + "'");
 	}
 
 	public void geraRelatorio(String arquivoSaida) throws IOException {
@@ -140,13 +144,13 @@ public class GeradorDeRelatorios {
 	private static void imprimeInstrucoes() {
 		System.out.println("Uso:");
 		System.out.println("\tjava " + GeradorDeRelatorios.class.getName()
-				+ " <algoritmo> <critério de ordenação> <critério de filtragem> <parâmetro de filtragem> <opções de formatação>");
+				+ "<arquivo de entrada> <algoritmo> <critério de ordenação> <critério de filtragem> <parâmetros de filtragem>");
 		System.out.println("Onde:");
+		System.out.println("\tarquivo de entrada: nome do arquivo de entrada");
 		System.out.println("\talgoritmo: 'quick' ou 'insertion'");
-		System.out.println("\tcriterio de ordenação: 'preco_c' ou 'descricao_c' ou 'estoque_c'");
-		System.out.println("\tcriterio de filtragem: 'todos' ou 'estoque_menor_igual' ou 'categoria_igual'");
+		System.out.println("\tcriterio de ordenação: 'preco_c' ou 'descricao_c' ou 'estoque_c' ou 'preco_d' ou 'descricao_d' ou 'estoque_d'");
+		System.out.println("\tcriterio de filtragem: 'todos' ou 'estoque_menor_igual' ou 'categoria_igual' ou 'intervalo_preco' ou 'descricao'");
 		System.out.println("\tparâmetro de filtragem: argumentos adicionais necessários para a filtragem");
-		System.out.println("\topções de formatação: 'negrito' e/ou 'italico'");
 		System.out.println();
 		System.exit(1);
 	}
@@ -158,32 +162,17 @@ public class GeradorDeRelatorios {
 		String opcao_algoritmo = args[0];
 		String opcao_criterio_ord = args[1];
 		String opcao_criterio_filtro = args[2];
-		String opcao_parametro_filtro = args[3];
+		List<String> argumentos_filtro = new ArrayList<String>();
 
-		String[] opcoes_formatacao = new String[2];
-		opcoes_formatacao[0] = args.length > 4 ? args[4] : null;
-		opcoes_formatacao[1] = args.length > 5 ? args[5] : null;
-
-		int formato = FORMATO_PADRAO;
-
-		//TODO: rapaz ta certo isso? 2
-		for (int i = 0; i < opcoes_formatacao.length; i++) {
-
-			String op = opcoes_formatacao[i];
-			formato |= (op != null
-					? op.equals("negrito") ? FORMATO_NEGRITO : (op.equals("italico") ? FORMATO_ITALICO : 0)
-					: 0);
-			System.out.println("Formato: " + Integer.toBinaryString(formato));
-		}
+		if(args.length > 3) Collections.addAll(argumentos_filtro, Arrays.copyOfRange(args, 3, args.length));
 
 		EstrategiaOrdenacao estrategiaOrdenacao = getEstrategiaOrdenacao(opcao_criterio_ord, opcao_algoritmo);
-		EstrategiaFiltragem estrategiaFiltragem = getEstrategiaFiltragem(opcao_criterio_filtro);
+		EstrategiaFiltragem estrategiaFiltragem = getEstrategiaFiltragem(opcao_criterio_filtro, argumentos_filtro);
 
 		GeradorDeRelatorios gdr = new GeradorDeRelatorios(carregaProdutos(),
 				estrategiaOrdenacao,
 				estrategiaFiltragem,
-				opcao_parametro_filtro,
-				formato);
+				argumentos_filtro);
 
 		try {
 			gdr.geraRelatorio("saida.html");
@@ -192,13 +181,21 @@ public class GeradorDeRelatorios {
 		}
 	}
 
-	private static EstrategiaFiltragem getEstrategiaFiltragem(String opcao_criterio_filtro) {
-		return switch (opcao_criterio_filtro) {
+	private static EstrategiaFiltragem getEstrategiaFiltragem(String opcao_criterio_filtro, List<String> argumentos_filtro) {
+		EstrategiaFiltragem estrategia = switch (opcao_criterio_filtro) {
 			case FILTRO_TODOS -> new EstrategiaTodos();
 			case FILTRO_CATEGORIA_IGUAL_A -> new EstrategiaCategoria();
 			case FILTRO_ESTOQUE_MENOR_OU_IGUAL_A -> new EstrategiaEstoqueMenorIgual();
+			case FILTRO_INTERVALO_PRECO -> new EstrategiaIntervaloPreco();
+			case FILTRO_DESCRICAO -> new EstrategiaDescricao();
+
 			default -> throw new RuntimeException("Filtro invalido!");
 		};
+
+		if (!argumentos_filtro.isEmpty())
+			estrategia.setArgs(argumentos_filtro);
+
+		return estrategia;
 	}
 
 	private static EstrategiaOrdenacao getEstrategiaOrdenacao(String opcao_criterio_ord, String opcao_algoritmo) {
@@ -206,6 +203,9 @@ public class GeradorDeRelatorios {
 			case CRIT_DESC_CRESC -> new EstrategiaDescCres();
 			case CRIT_PRECO_CRESC -> new EstrategiaPrecoCres();
 			case CRIT_ESTOQUE_CRESC -> new EstrategiaEstoqueCres();
+			case CRIT_DESC_DEC -> new EstrategiaDescDec();
+			case CRIT_PRECO_DEC -> new EstrategiaPrecoDec();
+			case CRIT_ESTOQUE_DEC -> new EstrategiaEstoqueDec();
 			default -> throw new RuntimeException("Criterio de ordenacao invalido!");
 		};
 

@@ -1,6 +1,6 @@
 import java.util.List;
 
-public class EstrategiaCategoria implements EstrategiaFiltragem {
+public class EstrategiaDescricao implements EstrategiaFiltragem {
     private String arg;
 
     @Override
@@ -10,6 +10,6 @@ public class EstrategiaCategoria implements EstrategiaFiltragem {
 
     @Override
     public boolean seleciona(Produto produto) {
-        return arg.equals(produto.getCategoria());
+        return produto.getDescricao().contains(arg);
     }
 }
